@@ -1,4 +1,3 @@
-from lib2to3.pgen2.token import EQUAL
 import socket
 import os
 import utils
@@ -23,22 +22,30 @@ print("Quantidade de Pacotes: ", len(packages))
 index = 0
 finished = False
 
-
 while(not finished):
     print("Enviando Pacote de Tamanho: " ,  MSS)
-    udpClient.sendto(packages[index], DESTINO)
+    udpClient.sendto(packages[index]['data'], DESTINO)
 
     msgFromServer = udpClient.recvfrom(1024)[0];
-    print(msgFromServer)
-    index = index +1;
 
-    if index == len(packages):
-        finished = True;
+    if(index == (len(packages) - 1)):
+        if(int(msgFromServer.decode("utf8")) == packages[index]["seq_number"] + len(packages[index]["data"])):
+            print("ACK: ", msgFromServer)
+            finished = True;
+        else:
+            print(msgFromServer.decode("utf8"))
+            print('tamanho: ',len(packages[index]))
+            print("Ocorreu Perda dos Dados")
+            print("reenviando Pacote: ", packages[index]["seq_number"])
+    elif(int(msgFromServer.decode("utf8")) == packages[index + 1]["seq_number"]):
+        print("ACK: ", msgFromServer)
+        index = index + 1;
+    else:
+        print(msgFromServer.decode("utf8"))
+        print("Ocorreu Perda dos Dados")
+        print("reenviando Pacote: ", packages[index]["seq_number"])
 
-    # if(int(msgFromServer.decode("utf8")) == len(packages[index]) + 1):
-    #     print("ACK: ", msgFromServer)
-    #     index = index +1;
-    # else:
-    #     print("Ocorreu Perda dos Dados")
+if(finished ):
+    udpClient.sendto("FIN", DESTINO)
 
 udpClient.close()
