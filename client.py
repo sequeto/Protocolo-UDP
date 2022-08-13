@@ -46,6 +46,8 @@ while(not finished):
         print("reenviando Pacote: ", packages[index]["seq_number"])
 
 if(finished ):
-    udpClient.sendto("FIN", DESTINO)
+    udpClient.sendto("FIN".encode("utf8"), DESTINO)
 
+print("\n")
+print("Finalizando Conexão")
 udpClient.close()
