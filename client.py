@@ -5,7 +5,7 @@ import time
 
 def sendData(packages, wnd_start, wnd_finish, udpClient, destiny):
     for data in packages[wnd_start: wnd_finish + 1]:
-        udpClient.sendto(data['data'], destiny)
+        udpClient.sendto(data['seq_number'].to_bytes(1, byteorder='big') + data["data"], destiny)
 
 # Constantes
 IP_SERVIDOR = '127.0.0.1'
@@ -28,7 +28,7 @@ print(packages)
 # Numero de Sequencia baseado em Inteiros
 
 send_window_start = 0 # Variáveis de Controle da Janela Deslizante
-send_window_finish = 4 # Variáveis de Controle da Janela Deslizante
+send_window_finish = 0 # Variáveis de Controle da Janela Deslizante
 
 finished = False
 acks_received = []
@@ -42,40 +42,26 @@ sendData(packages, send_window_start, send_window_finish, udpClient, DESTINO)
 while(not finished):
 
     msgFromServer = udpClient.recvfrom(1024)[0];
-    if(int(msgFromServer.decode("utf8")) == packages[send_window_start]["seq_number"]):
+
+    if(send_window_start == (len(packages) - 1)):
+        if(int.from_bytes(msgFromServer, "big") == packages[send_window_start]["seq_number"]):
+            print("ACK: ", msgFromServer)
+            finished = True;
+
+    if(int.from_bytes(msgFromServer, "big") == packages[send_window_start]["seq_number"]):
         print("ACK: ", msgFromServer)
         send_window_start = send_window_start + 1;
         
         if(send_window_finish < len(packages) - 1):
             send_window_finish = send_window_finish + 1;
-            udpClient.sendto(packages[send_window_finish]["data"], DESTINO)
+            udpClient.sendto(packages[send_window_finish]['seq_number'].to_bytes(1, byteorder='big') + packages[send_window_finish]["data"], DESTINO)
     
-    elif(int(msgFromServer.decode("utf8")) < packages[send_window_start]["seq_number"]):
+    elif(int.from_bytes(msgFromServer, "big") < packages[send_window_start]["seq_number"]):
         print("ACK: ", msgFromServer)
         sendData(packages, send_window_start, send_window_finish, udpClient, DESTINO)
     
-    # elif()
-
-#     if(index == (len(packages) - 1)):
-#         if(int(msgFromServer.decode("utf8")) == packages[index]["seq_number"]):
-#             print("ACK: ", msgFromServer)
-#             finished = True;
-#         else:
-#             # print(msgFromServer.decode("utf8"))
-#             # print('tamanho: ',len(packages[index]))
-#             print("Ocorreu Perda dos Dados")
-#             print("reenviando Pacote: ", packages[index]["seq_number"])
-#     elif(int(msgFromServer.decode("utf8")) == packages[index]["seq_number"]):
-#         print("ACK: ", msgFromServer)
-#         index = index + 1;
-#     else:
-#         # print(msgFromServer.decode("utf8"))
-#         print("Ocorreu Perda dos Dados")
-#         print("reenviando Pacote: ", packages[index]["seq_number"])
-
-# # Validar se existe desconexão
-# if(finished ):
-#     udpClient.sendto("FIN".encode("utf8"), DESTINO)
+if(finished ):
+    udpClient.sendto("FIN".encode("utf8"), DESTINO)
 
 
 

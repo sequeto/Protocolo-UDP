@@ -21,25 +21,27 @@ packages_received = 0
 
 while(True):
     Mensagem_Recebida, END_cliente = udpServer.recvfrom(BUFFER_SIZE); # Posição 0 e 1024 do retorno
+    
+    # finalizando Servidor
     if(Mensagem_Recebida.decode("utf8") == "FIN"): break
 
-    buffer.append(Mensagem_Recebida.decode("utf8"))
-    for data in buffer:
-        print("Recebi = " , data, " , Do Cliente: ", END_cliente)
-    udpServer.sendto(str(packages_received).encode("utf8"), END_cliente)
-    packages_received = packages_received + 1;
-    print(packages_received)
+    # Quebra dos Dados Recebidos
+    payload = Mensagem_Recebida[1: len(Mensagem_Recebida)]
+    ack = Mensagem_Recebida[0]
 
-# while(True):
-#     Mensagem_Recebida, END_cliente = udpServer.recvfrom(BUFFER_SIZE); # Posição 0 e 1024 do retorno
-#     if(Mensagem_Recebida.decode("utf8") == "FIN"): break
+    if(ack == packages_received + 1):
+        buffer.append(payload.decode("utf8"))
+        # print(payload.decode("utf"))
+        # print(Mensagem_Recebida[0])
+        for data in buffer:
+            print("Recebi = " , data, " , Do Cliente: ", END_cliente)
+        udpServer.sendto(ack.to_bytes(1, byteorder='big'), END_cliente)
+        packages_received = packages_received + 1;
+        print(packages_received)
 
-#     buffer.append(Mensagem_Recebida.decode("utf8"))
-#     received_data_length = received_data_length + len(Mensagem_Recebida);
-#     for data in buffer:
-#         print("Recebi = " , data, " , Do Cliente: ", END_cliente)
-#     udpServer.sendto(str(received_data_length + 1).encode("utf8"), END_cliente)
-#     print(received_data_length)
+    else:
+        udpServer.sendto(packages_received.to_bytes(1, byteorder='big'), END_cliente)
+
 
 print("\n")
 print("Finalizando Conexão")
