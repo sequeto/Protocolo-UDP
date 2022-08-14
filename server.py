@@ -29,10 +29,9 @@ while(True):
     payload = Mensagem_Recebida[1: len(Mensagem_Recebida)]
     ack = Mensagem_Recebida[0]
 
+    # Validando se Pacot recebido está na ordem, caso não esteja, descarta e retorna ACK anterior (Tratativa Go-Back-N (ACK cumulativo))
     if(ack == packages_received + 1):
         buffer.append(payload.decode("utf8"))
-        # print(payload.decode("utf"))
-        # print(Mensagem_Recebida[0])
         for data in buffer:
             print("Recebi = " , data, " , Do Cliente: ", END_cliente)
         udpServer.sendto(ack.to_bytes(1, byteorder='big'), END_cliente)
