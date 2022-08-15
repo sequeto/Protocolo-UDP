@@ -6,7 +6,7 @@ MEU_IP = '';
 MINHA_PORTA = 5000;
 MEU_SERVIDOR = (MEU_IP, MINHA_PORTA)
 BUFFER_SIZE = 1024 # Tamanho do Buffer de Recebimento
-WINDOW_PACKAGES_SIZE = 10 # Tamanho da Janela Deslizante
+WINDOW_PACKAGES_SIZE = 40 # Tamanho da Janela Deslizante
 
 udpServer = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 udpServer.bind(MEU_SERVIDOR)

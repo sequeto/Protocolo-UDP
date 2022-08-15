@@ -28,7 +28,7 @@ print(packages)
 # Numero de Sequencia baseado em Inteiros
 
 send_window_start = 0 # Variáveis de Controle da Janela Deslizante
-send_window_finish = 0 # Variáveis de Controle da Janela Deslizante
+send_window_finish = 4 # Variáveis de Controle da Janela Deslizante
 
 finished = False
 acks_received = []
@@ -50,6 +50,7 @@ while(not finished):
         if(ack == packages[send_window_start]["seq_number"]):
             print("ACK: ", ack)
             finished = True;
+    
 
     if(ack == packages[send_window_start]["seq_number"]):
         print("ACK: ", ack)
@@ -57,10 +58,17 @@ while(not finished):
         
         if(send_window_finish < len(packages) - 1):
             send_window_finish = send_window_finish + 1;
+            if(free_window == 0):
+                print("Aguardando Janela de Pacotes Liberar Espaço")
+                time.sleep(5)
+            print("Enviando Pacote: ", send_window_finish)
             udpClient.sendto(packages[send_window_finish]['seq_number'].to_bytes(1, byteorder='big') + packages[send_window_finish]["data"], DESTINO)
-    
+
     elif(ack < packages[send_window_start]["seq_number"]):
         print("ACK: ", ack)
+        if(free_window == 0):
+            print("Aguardando Janela de Pacotes Liberar Espaço")
+            time.sleep(5)
         print("Reenviando")
         break
         sendData(packages, send_window_start, send_window_finish, udpClient, DESTINO)
