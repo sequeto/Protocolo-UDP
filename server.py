@@ -51,7 +51,7 @@ print("Finalizando Conexão")
 udpServer.close()
 
 
-def congestion_avoidance(free_windows_size, buffer_size):
+def congestion_avoidance_RED(free_windows_size, buffer_size):
     if(free_window_size > buffer_size / 2):
         valor_acima_metade = (free_window_size - buffer_size/2)
         probabilidade_descarte = (valor_acima_metade*200)/buffer_size
