@@ -36,7 +36,7 @@ while(True):
         packages_received = packages_received + 1;
         for package in receive_window:
             print("Recebi = " , package, " , Do Cliente: ", END_cliente)
-        udpServer.sendto(ack.to_bytes(1, byteorder='big') + free_window_size.to_bytes(1, byteorder='big'), END_cliente)
+        # udpServer.sendto(ack.to_bytes(1, byteorder='big') + free_window_size.to_bytes(1, byteorder='big'), END_cliente)
         print(packages_received)
 
     else:
