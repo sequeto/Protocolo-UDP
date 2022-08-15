@@ -1,4 +1,4 @@
-#Equação de Controle de Congestionamento
+#Equação de Controle de Congestionamento - Técnica Slow Start
 
 import socket
 import os
@@ -6,8 +6,9 @@ import utils
 import time
 import select
 
-def sendData(packages, wnd_start, wnd_finish, udpClient, destiny):
-    for data in packages[wnd_start: wnd_finish + 1]:
+def sendData(packages, wnd_start, quantity, udpClient, destiny):
+    for data in packages[wnd_start: send_window_finish]:
+        print("Enviando Pacote: ", data['seq_number'])
         udpClient.sendto(data['seq_number'].to_bytes(1, byteorder='big') + data["data"], destiny)
 
 # Constantes
@@ -29,53 +30,71 @@ print(packages)
 
 # Realizando Comunicação
 # Numero de Sequencia baseado em Inteiros
+resending = 0
+limit = 0
 
+waiting_ack = 0
 send_window_start = 0 # Variáveis de Controle da Janela Deslizante
-send_window_finish = 4 # Variáveis de Controle da Janela Deslizante
-
+send_window_finish = 1 # Variáveis de Controle da Janela Deslizante
 finished = False
 
 # Enviando primeiro conjunto de Pacotes
-print("Enviando 5 Pacote de Tamanho: " ,  MSS)
+print("Enviando ", send_window_finish - send_window_start, " Pacotes de Tamanho: " ,  MSS)
 sendData(packages, send_window_start, send_window_finish, udpClient, DESTINO)
 
 while(not finished):
 
     returned, write, err = select.select([udpClient],[],[],3)
 
-    if(returned and len(returned) > 0):
+    print("Esperando", packages[waiting_ack]["seq_number"])
+    print("Inicio", send_window_start)
+    print("Fim", send_window_finish)
+
+    if(resending > 10):
+        send_window_finish = send_window_finish / 2
+
+    elif(returned and len(returned) > 0):
         msgFromServer = udpClient.recvfrom(1024)[0];
 
         ack = msgFromServer[0]
         free_window = msgFromServer[1]
 
-        if(send_window_start == (len(packages) - 1)):
-            if(ack == packages[send_window_start]["seq_number"]):
+        if(waiting_ack == (len(packages) - 1)):
+            if(ack == packages[waiting_ack]["seq_number"]):
                 print("ACK: ", ack)
                 finished = True;
         
 
-        if(ack == packages[send_window_start]["seq_number"]):
+        if(ack == packages[waiting_ack]["seq_number"]):
+            resending = 0
             print("ACK: ", ack)
-            send_window_start = send_window_start + 1;
+            waiting_ack = waiting_ack + 1
+            send_window_start = send_window_finish;
             
-            if(send_window_finish < len(packages) - 1):
-                send_window_finish = send_window_finish + 1;
+            if(send_window_finish <= len(packages) - 1):
+                if(send_window_finish * 2 < len(packages) - 1):
+                    send_window_finish = send_window_finish * 2;
+
+                else:
+                    send_window_finish = send_window_finish + 1;
+                    
                 if(free_window == 0):
                     print("Aguardando Janela de Pacotes Liberar Espaço")
                     time.sleep(5)
-                print("Enviando Pacote: ", send_window_finish)
-                udpClient.sendto(packages[send_window_finish]['seq_number'].to_bytes(1, byteorder='big') + packages[send_window_finish]["data"], DESTINO)
+                # udpClient.sendto(packages[send_window_finish]['seq_number'].to_bytes(1, byteorder='big') + packages[send_window_finish]["data"], DESTINO)
+                sendData(packages, send_window_start, send_window_finish, udpClient, DESTINO)
 
-        elif(ack < packages[send_window_start]["seq_number"]):
+        elif(ack < packages[waiting_ack]["seq_number"]):
             print("ACK: ", ack)
             if(free_window == 0):
                 print("Aguardando Janela de Pacotes Liberar Espaço")
                 time.sleep(5)
+            resending = resending + 1
             print("Reenviando")
             sendData(packages, send_window_start, send_window_finish, udpClient, DESTINO)
     else:
         print("TimeOut: Reenviando")
+        resending = resending + 1
         sendData(packages, send_window_start, send_window_finish, udpClient, DESTINO)
 
         
