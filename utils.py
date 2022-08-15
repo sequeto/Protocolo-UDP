@@ -1,6 +1,6 @@
 def breakChunks(file_path,BUFFER):
     packages = []
-    sequence_number = 0
+    sequence_number = 1
 
     with open(file_path, "rb") as f:
         while True:

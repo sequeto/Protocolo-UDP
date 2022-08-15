@@ -6,16 +6,16 @@ MEU_IP = '';
 MINHA_PORTA = 5000;
 MEU_SERVIDOR = (MEU_IP, MINHA_PORTA)
 BUFFER_SIZE = 1024 # Tamanho do Buffer de Recebimento
-
-ACK = str.encode("Retorno Recebido");
+WINDOW_PACKAGES_SIZE = 10 # Tamanho da Janela Deslizante
 
 udpServer = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 udpServer.bind(MEU_SERVIDOR)
 
 print("UDP Server Listening for Packets");
 
-buffer = deque([]);
-# buffer.popleft() - Removendo
+receive_window = deque([]);
+free_window_size = WINDOW_PACKAGES_SIZE
+# receive_window.popleft() - Removendo
 # received_data_length = 0;
 packages_received = 0
 
@@ -29,17 +29,19 @@ while(True):
     payload = Mensagem_Recebida[1: len(Mensagem_Recebida)]
     ack = Mensagem_Recebida[0]
 
-    # Validando se Pacot recebido está na ordem, caso não esteja, descarta e retorna ACK anterior (Tratativa Go-Back-N (ACK cumulativo))
-    if(ack == packages_received + 1):
-        buffer.append(payload.decode("utf8"))
-        for data in buffer:
-            print("Recebi = " , data, " , Do Cliente: ", END_cliente)
-        udpServer.sendto(ack.to_bytes(1, byteorder='big'), END_cliente)
+    # Validando se Pacote recebido está na ordem, caso não esteja, descarta e retorna ACK anterior (Tratativa Go-Back-N (ACK cumulativo))
+    if(ack == packages_received + 1 and free_window_size > 0):
+        receive_window.append(payload.decode("utf8"))
+        free_window_size = free_window_size - 1
         packages_received = packages_received + 1;
+        for package in receive_window:
+            print("Recebi = " , package, " , Do Cliente: ", END_cliente)
+        udpServer.sendto(ack.to_bytes(1, byteorder='big') + free_window_size.to_bytes(1, byteorder='big'), END_cliente)
         print(packages_received)
 
     else:
-        udpServer.sendto(packages_received.to_bytes(1, byteorder='big'), END_cliente)
+        print("Pacote Faltando")
+        udpServer.sendto(packages_received.to_bytes(1, byteorder='big') + free_window_size.to_bytes(1, byteorder='big'), END_cliente)
 
 
 print("\n")

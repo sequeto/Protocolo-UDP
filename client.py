@@ -43,21 +43,26 @@ while(not finished):
 
     msgFromServer = udpClient.recvfrom(1024)[0];
 
+    ack = msgFromServer[0]
+    free_window = msgFromServer[1]
+
     if(send_window_start == (len(packages) - 1)):
-        if(int.from_bytes(msgFromServer, "big") == packages[send_window_start]["seq_number"]):
-            print("ACK: ", msgFromServer)
+        if(ack == packages[send_window_start]["seq_number"]):
+            print("ACK: ", ack)
             finished = True;
 
-    if(int.from_bytes(msgFromServer, "big") == packages[send_window_start]["seq_number"]):
-        print("ACK: ", msgFromServer)
+    if(ack == packages[send_window_start]["seq_number"]):
+        print("ACK: ", ack)
         send_window_start = send_window_start + 1;
         
         if(send_window_finish < len(packages) - 1):
             send_window_finish = send_window_finish + 1;
             udpClient.sendto(packages[send_window_finish]['seq_number'].to_bytes(1, byteorder='big') + packages[send_window_finish]["data"], DESTINO)
     
-    elif(int.from_bytes(msgFromServer, "big") < packages[send_window_start]["seq_number"]):
-        print("ACK: ", msgFromServer)
+    elif(ack < packages[send_window_start]["seq_number"]):
+        print("ACK: ", ack)
+        print("Reenviando")
+        break
         sendData(packages, send_window_start, send_window_finish, udpClient, DESTINO)
     
 if(finished ):
