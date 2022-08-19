@@ -13,10 +13,10 @@ def sendData(packages, wnd_start, quantity, udpClient, destiny):
 
 # Constantes
 IP_SERVIDOR = '127.0.0.1'
-PORTA_SERVIDOR = 5000
+PORTA_SERVIDOR = 5001
 DESTINO = (IP_SERVIDOR, PORTA_SERVIDOR)
 
-MSS = 1
+MSS = 1000
 
 # Inicializando UDP Socket
 udpClient = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -26,7 +26,7 @@ tamanho_arquivo = os.path.getsize("teste.txt")
 print("tamanho do arquivo em Bytes:", tamanho_arquivo)
 packages = utils.breakChunks('teste.txt', MSS)
 print("Quantidade de Pacotes: ", len(packages))
-print(packages)
+#print(packages)
 
 # Realizando Comunicação
 # Numero de Sequencia baseado em Inteiros
@@ -46,18 +46,21 @@ while(not finished):
 
     returned, write, err = select.select([udpClient],[],[],3)
 
-    print("Esperando", packages[waiting_ack]["seq_number"])
-    print("Inicio", send_window_start)
-    print("Fim", send_window_finish)
+    #print("Esperando", packages[waiting_ack]["seq_number"])
+    #print("Inicio", send_window_start)
+    #print("Fim", send_window_finish)
 
     if(resending > 10):
-        send_window_finish = send_window_finish / 2
+        send_window_finish = send_window_start + 2; 
 
     elif(returned and len(returned) > 0):
         msgFromServer = udpClient.recvfrom(1024)[0];
 
+        print("Recebendo")
         ack = msgFromServer[0]
         free_window = msgFromServer[1]
+
+        print("Janela: ", free_window);
 
         if(waiting_ack == (len(packages) - 1)):
             if(ack == packages[waiting_ack]["seq_number"]):
@@ -76,7 +79,7 @@ while(not finished):
                     send_window_finish = send_window_finish * 2;
 
                 else:
-                    send_window_finish = send_window_finish + 1;
+                    send_window_finish = send_window_finish + (len(packages) - send_window_finish);
                     
                 if(free_window == 0):
                     print("Aguardando Janela de Pacotes Liberar Espaço")
@@ -102,38 +105,6 @@ while(not finished):
 if(finished):
     udpClient.sendto("FIN".encode("utf8"), DESTINO)
 
-
-
-
-# Numero de Sequencia baseado em Fluxo de Bytes
-# index = 0
-# finished = False
-
-# while(not finished):
-#     print("Enviando Pacote de Tamanho: " ,  MSS)
-#     udpClient.sendto(packages[index]['data'], DESTINO)
-
-#     msgFromServer = udpClient.recvfrom(1024)[0];
-
-#     if(index == (len(packages) - 1)):
-#         if(int(msgFromServer.decode("utf8")) == packages[index]["seq_number"] + len(packages[index]["data"])):
-#             print("ACK: ", msgFromServer)
-#             finished = True;
-#         else:
-#             # print(msgFromServer.decode("utf8"))
-#             # print('tamanho: ',len(packages[index]))
-#             print("Ocorreu Perda dos Dados")
-#             print("reenviando Pacote: ", packages[index]["seq_number"])
-#     elif(int(msgFromServer.decode("utf8")) == packages[index + 1]["seq_number"]):
-#         print("ACK: ", msgFromServer)
-#         index = index + 1;
-#     else:
-#         # print(msgFromServer.decode("utf8"))
-#         print("Ocorreu Perda dos Dados")
-#         print("reenviando Pacote: ", packages[index]["seq_number"])
-
-# if(finished ):
-#     udpClient.sendto("FIN".encode("utf8"), DESTINO)
 
 print("\n")
 print("Finalizando Conexão")
