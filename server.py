@@ -7,7 +7,7 @@ import random
 
 
 def congestion_avoidance_RED(free_windows_size, buffer_size):
-    if(free_windows_size > buffer_size / 2):
+    if(free_windows_size < buffer_size / 2):
         valor_acima_metade = (free_windows_size - buffer_size/2)
         probabilidade_descarte = (valor_acima_metade*200)/buffer_size
         chance = random.randint(0,100)
@@ -42,9 +42,6 @@ while(True):
     
     # finalizando Servidor
     #if(Mensagem_Recebida.decode("utf8") == "FIN"): break
-
-    #if(free_window_size <= 5):
-        #free_window_size = free_window_size + 1
             
         
     print("Tamanho da Janela de Recepção", free_window_size)
@@ -56,11 +53,14 @@ while(True):
     print("janela", free_window_size)
     print("recebidos", packages_received)
 
+
     # Validando se Pacote recebido está na ordem, caso não esteja, descarta e retorna ACK anterior (Tratativa Go-Back-N (ACK cumulativo))
-    if(ack == packages_received + 1 and free_window_size > 0):
+    if(ack == packages_received + 1 and free_window_size > 0 and congestion_avoidance_RED(free_window_size, 10)):
         receive_window.append(payload)
         #free_window_size = free_window_size - 1
         packages_received = packages_received + 1;
+        if(packages_received == 255):
+            packages_received = 0
         # for package in receive_window:
             # print("Recebi = " , package, " , Do Cliente: ", END_cliente)
         udpServer.sendto(ack.to_bytes(1, byteorder='big') + free_window_size.to_bytes(1, byteorder='big'), END_cliente)
@@ -68,7 +68,9 @@ while(True):
 
     else:
         print("Pacote Faltando")
-        break
+        #if(free_window_size == 0):
+            #free_window_size = free_window_size + 5
+        #break
         udpServer.sendto(packages_received.to_bytes(1, byteorder='big') + free_window_size.to_bytes(1, byteorder='big'), END_cliente)
 
 

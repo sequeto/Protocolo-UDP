@@ -16,7 +16,7 @@ IP_SERVIDOR = '127.0.0.1'
 PORTA_SERVIDOR = 5001
 DESTINO = (IP_SERVIDOR, PORTA_SERVIDOR)
 
-MSS = 1000
+MSS = 100
 
 # Inicializando UDP Socket
 udpClient = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -33,6 +33,9 @@ print("Quantidade de Pacotes: ", len(packages))
 resending = 0
 limit = 0
 
+count = 0
+            
+
 waiting_ack = 0
 send_window_start = 0 # Variáveis de Controle da Janela Deslizante
 send_window_finish = 1 # Variáveis de Controle da Janela Deslizante
@@ -44,14 +47,16 @@ sendData(packages, send_window_start, send_window_finish, udpClient, DESTINO)
 
 while(not finished):
 
-    returned, write, err = select.select([udpClient],[],[],3)
+    returned, write, err = select.select([udpClient],[],[],1)
 
     #print("Esperando", packages[waiting_ack]["seq_number"])
     #print("Inicio", send_window_start)
     #print("Fim", send_window_finish)
 
     if(resending > 10):
-        send_window_finish = send_window_start + 2; 
+        print("Voltou")
+        resending = 0
+        send_window_finish = send_window_start + 1;
 
     elif(returned and len(returned) > 0):
         msgFromServer = udpClient.recvfrom(1024)[0];
@@ -72,20 +77,26 @@ while(not finished):
             resending = 0
             print("ACK: ", ack)
             waiting_ack = waiting_ack + 1
-            send_window_start = send_window_finish;
-            
-            if(send_window_finish <= len(packages) - 1):
-                if(send_window_finish * 2 < len(packages) - 1):
-                    send_window_finish = send_window_finish * 2;
 
-                else:
-                    send_window_finish = send_window_finish + (len(packages) - send_window_finish);
+            if(waiting_ack == send_window_finish):
+                send_window_start = send_window_finish;
+                
+                if(send_window_finish <= len(packages) - 1):
+                    if(send_window_finish * 2 < len(packages) - 1):
+                        send_window_finish = send_window_finish * 2;
+                    else:
+                        send_window_finish = send_window_finish + (len(packages) - send_window_finish);
                     
-                if(free_window == 0):
-                    print("Aguardando Janela de Pacotes Liberar Espaço")
-                    time.sleep(5)
-                # udpClient.sendto(packages[send_window_finish]['seq_number'].to_bytes(1, byteorder='big') + packages[send_window_finish]["data"], DESTINO)
-                sendData(packages, send_window_start, send_window_finish, udpClient, DESTINO)
+
+                    if((send_window_finish - send_window_start) > 255):
+                        send_window_finish = send_window_start + 255;
+
+                    if(free_window == 0):
+                        print("Aguardando Janela de Pacotes Liberar Espaço")
+                        time.sleep(5)
+                    # udpClient.sendto(packages[send_window_finish]['seq_number'].to_bytes(1, byteorder='big') + packages[send_window_finish]["data"], DESTINO)
+
+                    sendData(packages, send_window_start, send_window_finish, udpClient, DESTINO)
 
         elif(ack < packages[waiting_ack]["seq_number"]):
             print("ACK: ", ack)
