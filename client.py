@@ -6,9 +6,10 @@ import utils
 import time
 import select
 
-def sendData(packages, wnd_start, quantity, udpClient, destiny):
+def sendData(packages, wnd_start, send_window_finish, udpClient, destiny):
+    print("quantidade", send_window_finish - wnd_start)
     for data in packages[wnd_start: send_window_finish]:
-        print("Enviando Pacote: ", data['seq_number'])
+        #print("Enviando Pacote: ", data['seq_number'])
         udpClient.sendto(data['seq_number'].to_bytes(1, byteorder='big') + data["data"], destiny)
 
 # Constantes
@@ -22,9 +23,9 @@ MSS = 100
 udpClient = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 # Realizando Quebra do arquivo em Chunks de Acordo com o MSS (Maximun Segment Size)
-tamanho_arquivo = os.path.getsize("teste.txt")
+tamanho_arquivo = os.path.getsize("arquivo.txt")
 print("tamanho do arquivo em Bytes:", tamanho_arquivo)
-packages = utils.breakChunks('teste.txt', MSS)
+packages = utils.breakChunks('arquivo.txt', MSS)
 print("Quantidade de Pacotes: ", len(packages))
 #print(packages)
 
@@ -41,13 +42,17 @@ send_window_start = 0 # Variáveis de Controle da Janela Deslizante
 send_window_finish = 1 # Variáveis de Controle da Janela Deslizante
 finished = False
 
+import time
+
+inicio = time.time()
+
 # Enviando primeiro conjunto de Pacotes
 print("Enviando ", send_window_finish - send_window_start, " Pacotes de Tamanho: " ,  MSS)
 sendData(packages, send_window_start, send_window_finish, udpClient, DESTINO)
 
 while(not finished):
 
-    returned, write, err = select.select([udpClient],[],[],1)
+    returned, write, err = select.select([udpClient],[],[],3)
 
     #print("Esperando", packages[waiting_ack]["seq_number"])
     #print("Inicio", send_window_start)
@@ -61,21 +66,21 @@ while(not finished):
     elif(returned and len(returned) > 0):
         msgFromServer = udpClient.recvfrom(1024)[0];
 
-        print("Recebendo")
+        #print("Recebendo")
         ack = msgFromServer[0]
         free_window = msgFromServer[1]
 
-        print("Janela: ", free_window);
+        #print("Janela: ", free_window);
 
         if(waiting_ack == (len(packages) - 1)):
             if(ack == packages[waiting_ack]["seq_number"]):
-                print("ACK: ", ack)
+                #print("ACK: ", ack)
                 finished = True;
         
 
         if(ack == packages[waiting_ack]["seq_number"]):
             resending = 0
-            print("ACK: ", ack)
+            #print("ACK: ", ack)
             waiting_ack = waiting_ack + 1
 
             if(waiting_ack == send_window_finish):
@@ -115,6 +120,9 @@ while(not finished):
     
 if(finished):
     udpClient.sendto("FIN".encode("utf8"), DESTINO)
+
+fim = time.time()
+print("tempo de execução", fim - inicio)
 
 
 print("\n")
